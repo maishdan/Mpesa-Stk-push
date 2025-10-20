@@ -162,10 +162,17 @@ export class MpesaExpressService {
     }
 
     private validateDto(dto: CreateMpesaExpressDto): void {
+        // Convert phone number formats if needed
+        if (dto.phoneNum.match(/^07\d{8}$/)) {
+            dto.phoneNum = '254' + dto.phoneNum.substring(1);
+        } else if (dto.phoneNum.match(/^01\d{8}$/)) {
+            dto.phoneNum = '254' + dto.phoneNum.substring(1);
+        }
+
         const validations = [
             {
                 condition: !dto.phoneNum.match(/^2547\d{8}$/),
-                message: 'Phone number must be in the format 2547XXXXXXXX',
+                message: 'Phone number must be in the format 07XXXXXXXX, 01XXXXXXXX, or 2547XXXXXXXX',
             },
             {
                 condition: !dto.accountRef.match(/^[a-zA-Z0-9]{1,12}$/),
@@ -220,8 +227,8 @@ export class MpesaExpressService {
             PartyB: shortcode,
             PhoneNumber: dto.phoneNum,
             CallBackURL: callbackUrl,
-            AccountReference: dto.accountRef,
-            TransactionDesc: 'szken',
+            AccountReference: 'DaniwestTechSol',
+            TransactionDesc: `Do you want to pay KSH ${dto.amount} to Daniwest Tech Sol Ltd.? Account number: Daniwest Tech Sol`,
         };
     }
 

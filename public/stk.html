@@ -40,7 +40,7 @@
         <form id="stkForm">
             <div class="form-group">
                 <label for="phoneNum">Phone Number</label>
-                <input type="text" id="phoneNum" name="phoneNum" placeholder="2547XXXXXXXX" required>
+                <input type="text" id="phoneNum" name="phoneNum" placeholder="07XXXXXXXX or 01XXXXXXXX" required>
             </div>
             <div class="form-group">
                 <label for="amount">Amount (KES)</label>
@@ -48,7 +48,7 @@
             </div>
             <div class="form-group">
                 <label for="accountRef">Account Reference</label>
-                <input type="text" id="accountRef" name="accountRef" maxlength="12" placeholder="DaniwestWiFi" required>
+                <input type="text" id="accountRef" name="accountRef" maxlength="12" value="DaniwestTechSol" required>
             </div>
             <button type="submit" id="submitBtn">Pay Now</button>
         </form>
@@ -57,6 +57,8 @@
     </div>
 
     <script>
+        let pollInterval = null;
+        
         document.getElementById('stkForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const btn = document.getElementById('submitBtn');
@@ -67,10 +69,18 @@
                 accountRef: document.getElementById('accountRef').value.trim(),
             };
 
-            if (!/^2547\d{8}$/.test(formData.phoneNum)) {
-                show('error', 'Phone must be 2547XXXXXXXX');
+            // Convert phone number to 254 format if needed
+            let phoneNumber = formData.phoneNum;
+            if (/^07\d{8}$/.test(phoneNumber)) {
+                phoneNumber = '254' + phoneNumber.substring(1);
+            } else if (/^01\d{8}$/.test(phoneNumber)) {
+                phoneNumber = '254' + phoneNumber.substring(1);
+            } else if (!/^2547\d{8}$/.test(phoneNumber)) {
+                show('error', 'Phone must be 07XXXXXXXX, 01XXXXXXXX, or 2547XXXXXXXX');
                 return;
             }
+            formData.phoneNum = phoneNumber;
+            
             if (!/^[a-zA-Z0-9]{1,12}$/.test(formData.accountRef)) {
                 show('error', 'Account reference must be alphanumeric, max 12 chars');
                 return;
@@ -88,22 +98,92 @@
                     body: JSON.stringify(formData)
                 });
                 const data = await res.json();
+                
                 if (res.ok && data.success) {
-                    show('success', `STK sent. CheckoutRequestID: ${data.data.CheckoutRequestID}`);
+                    const checkoutRequestID = data.data.CheckoutRequestID;
+                    show('info', `<span class="spinner"></span>STK push sent successfully! Please check your phone and enter your M-Pesa PIN. Waiting for payment confirmation...`);
+                    
+                    // Start polling for payment status
+                    startPaymentPolling(checkoutRequestID, formData.amount);
                 } else {
-                    show('error', data.message || 'Failed to initiate STK');
+                    show('error', data.message || 'Failed to initiate STK push');
+                    btn.disabled = false;
+                    btn.textContent = 'Pay Now';
                 }
             } catch (err) {
                 show('error', 'Network error: ' + err.message);
-            } finally {
                 btn.disabled = false;
                 btn.textContent = 'Pay Now';
             }
+        });
 
-            function show(type, msg) {
-                resultDiv.className = `result ${type}`;
-                resultDiv.innerHTML = msg;
-                resultDiv.style.display = 'block';
+        function startPaymentPolling(checkoutRequestID, amount) {
+            let pollCount = 0;
+            const maxPolls = 60; // Poll for 2 minutes (60 * 2 seconds)
+            
+            pollInterval = setInterval(async () => {
+                pollCount++;
+                
+                try {
+                    const baseUrl = window.location.origin;
+                    const response = await fetch(`${baseUrl}/api/mpesa/transactions?limit=50`);
+                    const transactions = await response.json();
+                    
+                    // Find our transaction
+                    const transaction = transactions.find(t => t.CheckoutRequestID === checkoutRequestID);
+                    
+                    if (transaction) {
+                        clearInterval(pollInterval);
+                        const btn = document.getElementById('submitBtn');
+                        
+                        if (transaction.status === 'COMPLETED') {
+                            show('success', `✅ Payment successful! KSH ${amount} has been received. Receipt: ${transaction.MpesaReceiptNumber}`);
+                        } else if (transaction.status === 'FAILED') {
+                            show('error', `❌ Payment failed: ${transaction.ResultDesc}. Please try again.`);
+                            setTimeout(() => {
+                                if (confirm('Would you like to try the payment again?')) {
+                                    location.reload();
+                                }
+                            }, 3000);
+                        }
+                        
+                        btn.disabled = false;
+                        btn.textContent = 'Pay Now';
+                        return;
+                    }
+                    
+                    // Check for timeout
+                    if (pollCount >= maxPolls) {
+                        clearInterval(pollInterval);
+                        const btn = document.getElementById('submitBtn');
+                        show('error', `⏰ Payment timeout. The STK push may have expired. Please try again.`);
+                        
+                        setTimeout(() => {
+                            if (confirm('Payment timed out. Would you like to try again?')) {
+                                location.reload();
+                            }
+                        }, 3000);
+                        
+                        btn.disabled = false;
+                        btn.textContent = 'Pay Now';
+                    }
+                } catch (error) {
+                    console.error('Polling error:', error);
+                }
+            }, 2000); // Poll every 2 seconds
+        }
+
+        function show(type, msg) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${type}`;
+            resultDiv.innerHTML = msg;
+            resultDiv.style.display = 'block';
+        }
+
+        // Clean up polling on page unload
+        window.addEventListener('beforeunload', () => {
+            if (pollInterval) {
+                clearInterval(pollInterval);
             }
         });
     </script>
