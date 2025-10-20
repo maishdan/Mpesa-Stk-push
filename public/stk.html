@@ -22,6 +22,131 @@
         .info {background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; margin-bottom:16px}
         .spinner {width:24px;height:24px;border:3px solid #e2e8f0;border-top-color:#3498db;border-radius:50%;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px}
         @keyframes spin {to {transform: rotate(360deg)}}
+        
+        /* Enhanced Loading Screen */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .loading-content {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid #e2e8f0;
+            border-top-color: #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        .loading-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .loading-subtext {
+            font-size: 14px;
+            color: #6c757d;
+            line-height: 1.4;
+        }
+        
+        /* Success Tile */
+        .success-tile {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            padding: 30px;
+            border-radius: 16px;
+            text-align: center;
+            margin-top: 20px;
+            display: none;
+            box-shadow: 0 10px 30px rgba(39, 174, 96, 0.3);
+        }
+        .success-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        .success-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .success-message {
+            font-size: 16px;
+            margin-bottom: 20px;
+            opacity: 0.9;
+        }
+        .download-receipt-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+        .download-receipt-btn:hover {
+            background: white;
+            color: #27ae60;
+        }
+        
+        /* Error Tile */
+        .error-tile {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 30px;
+            border-radius: 16px;
+            text-align: center;
+            margin-top: 20px;
+            display: none;
+            box-shadow: 0 10px 30px rgba(231, 76, 60, 0.3);
+        }
+        .error-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        .error-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .error-message {
+            font-size: 16px;
+            margin-bottom: 20px;
+            opacity: 0.9;
+        }
+        .retry-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+        }
+        .retry-btn:hover {
+            background: white;
+            color: #e74c3c;
+        }
     </style>
 </head>
 <body>
@@ -54,15 +179,62 @@
         </form>
 
         <div id="result" class="result"></div>
+        
+        <!-- Success Tile -->
+        <div id="successTile" class="success-tile">
+            <div class="success-icon">✅</div>
+            <div class="success-title">Payment Successful!</div>
+            <div class="success-message">Thank you for using Daniwest Tech Sol for a successful transaction</div>
+            <a id="downloadReceiptLink" href="#" class="download-receipt-btn" target="_blank">
+                📄 Download Your Receipt
+            </a>
+        </div>
+        
+        <!-- Error Tile -->
+        <div id="errorTile" class="error-tile">
+            <div class="error-icon">❌</div>
+            <div class="error-title">Payment Failed</div>
+            <div id="errorMessage" class="error-message">An error occurred during payment processing</div>
+            <button id="retryBtn" class="retry-btn">🔄 Try Again</button>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Processing Payment...</div>
+            <div id="loadingSubtext" class="loading-subtext">
+                STK push sent successfully!<br>
+                Please check your phone and enter your M-Pesa PIN.<br>
+                <strong>Do not refresh this page.</strong>
+            </div>
+        </div>
     </div>
 
     <script>
         let pollInterval = null;
+        let currentTransactionId = null;
         
-        document.getElementById('stkForm').addEventListener('submit', async function(e) {
+        // DOM Elements
+        const form = document.getElementById('stkForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const resultDiv = document.getElementById('result');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingSubtext = document.getElementById('loadingSubtext');
+        const successTile = document.getElementById('successTile');
+        const errorTile = document.getElementById('errorTile');
+        const errorMessage = document.getElementById('errorMessage');
+        const retryBtn = document.getElementById('retryBtn');
+        const downloadReceiptLink = document.getElementById('downloadReceiptLink');
+        
+        form.addEventListener('submit', async function(e) {
             e.preventDefault();
-            const btn = document.getElementById('submitBtn');
-            const resultDiv = document.getElementById('result');
+            
+            // Reset UI
+            hideAllTiles();
+            resultDiv.style.display = 'none';
+            
             const formData = {
                 phoneNum: document.getElementById('phoneNum').value.trim(),
                 amount: parseInt(document.getElementById('amount').value, 10),
@@ -70,7 +242,52 @@
             };
 
             // Auto-detect and convert phone number to 254 format
-            let phoneNumber = formData.phoneNum.replace(/\s+/g, '').replace(/[^\d]/g, '');
+            const phoneValidation = validateAndFormatPhone(formData.phoneNum);
+            if (!phoneValidation.valid) {
+                show('error', phoneValidation.message);
+                return;
+            }
+            formData.phoneNum = phoneValidation.phone;
+            
+            // Validate account reference
+            if (!/^[a-zA-Z0-9\s]{1,20}$/.test(formData.accountRef)) {
+                show('error', 'Account reference must be alphanumeric, max 20 chars');
+                return;
+            }
+
+            // Disable form and show initial loading
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner"></span>Initiating...';
+
+            try {
+                const baseUrl = window.location.origin;
+                const res = await fetch(`${baseUrl}/api/mpesa/stkpush`, {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify(formData)
+                });
+                const data = await res.json();
+                
+                if (res.ok && data.success) {
+                    const checkoutRequestID = data.data.CheckoutRequestID;
+                    
+                    // Show loading overlay
+                    showLoadingScreen();
+                    
+                    // Start polling for payment status
+                    startPaymentPolling(checkoutRequestID, formData.amount);
+                } else {
+                    showError(data.message || 'Failed to initiate STK push');
+                    resetForm();
+                }
+            } catch (err) {
+                showError('Network error: ' + err.message);
+                resetForm();
+            }
+        });
+
+        function validateAndFormatPhone(phoneInput) {
+            let phoneNumber = phoneInput.replace(/\s+/g, '').replace(/[^\d+]/g, '');
             
             // Handle different Kenyan phone number formats
             if (/^07\d{8}$/.test(phoneNumber)) {
@@ -90,60 +307,35 @@
             } else if (/^\+2541\d{8}$/.test(phoneNumber)) {
                 phoneNumber = phoneNumber.substring(1);
             } else {
-                show('error', 'Please enter a valid Kenyan phone number');
-                return;
+                return { valid: false, message: 'Please enter a valid Kenyan phone number' };
             }
             
             // Ensure it's a valid Safaricom number (254 7X or 254 1X)
             if (!/^254[71]\d{8}$/.test(phoneNumber)) {
-                show('error', 'Please enter a valid Safaricom number');
-                return;
+                return { valid: false, message: 'Please enter a valid Safaricom number' };
             }
             
-            formData.phoneNum = phoneNumber;
-            
-            if (!/^[a-zA-Z0-9\s]{1,20}$/.test(formData.accountRef)) {
-                show('error', 'Account reference must be alphanumeric, max 20 chars');
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner"></span>Processing...';
-            resultDiv.style.display = 'none';
-
-            try {
-                const baseUrl = window.location.origin;
-                const res = await fetch(`${baseUrl}/api/mpesa/stkpush`, {
-                    method: 'POST',
-                    headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify(formData)
-                });
-                const data = await res.json();
-                
-                if (res.ok && data.success) {
-                    const checkoutRequestID = data.data.CheckoutRequestID;
-                    show('info', `<span class="spinner"></span>STK push sent successfully! Please check your phone and enter your M-Pesa PIN. Waiting for payment confirmation...`);
-                    
-                    // Start polling for payment status
-                    startPaymentPolling(checkoutRequestID, formData.amount);
-                } else {
-                    show('error', data.message || 'Failed to initiate STK push');
-                    btn.disabled = false;
-                    btn.textContent = 'Pay Now';
-                }
-            } catch (err) {
-                show('error', 'Network error: ' + err.message);
-                btn.disabled = false;
-                btn.textContent = 'Pay Now';
-            }
-        });
+            return { valid: true, phone: phoneNumber };
+        }
 
         function startPaymentPolling(checkoutRequestID, amount) {
             let pollCount = 0;
-            const maxPolls = 60; // Poll for 2 minutes (60 * 2 seconds)
+            const maxPolls = 90; // Poll for 3 minutes (90 * 2 seconds)
+            
+            // Update loading text
+            updateLoadingText('Waiting for payment confirmation...', 'Please complete the payment on your phone');
             
             pollInterval = setInterval(async () => {
                 pollCount++;
+                
+                // Update loading text based on time elapsed
+                if (pollCount === 15) { // 30 seconds
+                    updateLoadingText('Still processing...', 'Please ensure you have entered your M-Pesa PIN');
+                } else if (pollCount === 30) { // 1 minute
+                    updateLoadingText('Payment in progress...', 'This may take a few moments to complete');
+                } else if (pollCount === 60) { // 2 minutes
+                    updateLoadingText('Almost done...', 'Please wait while we confirm your payment');
+                }
                 
                 try {
                     const baseUrl = window.location.origin;
@@ -155,38 +347,22 @@
                     
                     if (transaction) {
                         clearInterval(pollInterval);
-                        const btn = document.getElementById('submitBtn');
+                        hideLoadingScreen();
+                        currentTransactionId = transaction.id;
                         
                         if (transaction.status === 'COMPLETED') {
-                            show('success', `✅ Payment successful! KSH ${amount} has been received. Receipt: ${transaction.MpesaReceiptNumber}`);
+                            showSuccess(transaction);
                         } else if (transaction.status === 'FAILED') {
-                            show('error', `❌ Payment failed: ${transaction.ResultDesc}. Please try again.`);
-                            setTimeout(() => {
-                                if (confirm('Would you like to try the payment again?')) {
-                                    location.reload();
-                                }
-                            }, 3000);
+                            showError(transaction.ResultDesc || 'Payment was not completed');
                         }
-                        
-                        btn.disabled = false;
-                        btn.textContent = 'Pay Now';
                         return;
                     }
                     
                     // Check for timeout
                     if (pollCount >= maxPolls) {
                         clearInterval(pollInterval);
-                        const btn = document.getElementById('submitBtn');
-                        show('error', `⏰ Payment timeout. The STK push may have expired. Please try again.`);
-                        
-                        setTimeout(() => {
-                            if (confirm('Payment timed out. Would you like to try again?')) {
-                                location.reload();
-                            }
-                        }, 3000);
-                        
-                        btn.disabled = false;
-                        btn.textContent = 'Pay Now';
+                        hideLoadingScreen();
+                        showError('Payment timeout. The STK push may have expired. Please try again.');
                     }
                 } catch (error) {
                     console.error('Polling error:', error);
@@ -194,17 +370,84 @@
             }, 2000); // Poll every 2 seconds
         }
 
+        function showLoadingScreen() {
+            loadingOverlay.style.display = 'flex';
+            document.body.style.overflow = 'hidden'; // Prevent scrolling
+        }
+
+        function hideLoadingScreen() {
+            loadingOverlay.style.display = 'none';
+            document.body.style.overflow = 'auto'; // Restore scrolling
+        }
+
+        function updateLoadingText(mainText, subText) {
+            document.querySelector('.loading-text').textContent = mainText;
+            loadingSubtext.innerHTML = subText + '<br><strong>Do not refresh this page.</strong>';
+        }
+
+        function showSuccess(transaction) {
+            hideAllTiles();
+            
+            // Set up download link
+            const baseUrl = window.location.origin;
+            downloadReceiptLink.href = `${baseUrl}/api/mpesa/receipt/${transaction.id}`;
+            
+            // Show success tile
+            successTile.style.display = 'block';
+            resetForm();
+            
+            // Scroll to success tile
+            successTile.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function showError(message) {
+            hideAllTiles();
+            errorMessage.textContent = message;
+            errorTile.style.display = 'block';
+            resetForm();
+            
+            // Scroll to error tile
+            errorTile.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function hideAllTiles() {
+            successTile.style.display = 'none';
+            errorTile.style.display = 'none';
+            resultDiv.style.display = 'none';
+        }
+
+        function resetForm() {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Pay Now';
+        }
+
         function show(type, msg) {
-            const resultDiv = document.getElementById('result');
+            hideAllTiles();
             resultDiv.className = `result ${type}`;
             resultDiv.innerHTML = msg;
             resultDiv.style.display = 'block';
         }
 
+        // Retry button functionality
+        retryBtn.addEventListener('click', function() {
+            hideAllTiles();
+            // Scroll back to form
+            form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+
         // Clean up polling on page unload
         window.addEventListener('beforeunload', () => {
             if (pollInterval) {
                 clearInterval(pollInterval);
+            }
+        });
+
+        // Prevent accidental page refresh during payment
+        window.addEventListener('beforeunload', function(e) {
+            if (pollInterval) {
+                e.preventDefault();
+                e.returnValue = 'Payment is in progress. Are you sure you want to leave?';
+                return e.returnValue;
             }
         });
     </script>
