@@ -16,6 +16,13 @@
   .PENDING {background:#fff7ed; color:#9a3412}
   .COMPLETED {background:#ecfdf5; color:#065f46}
   .FAILED {background:#fef2f2; color:#991b1b}
+  .download-btn {
+    background:#3b82f6; color:white; border:none; padding:6px 12px; 
+    border-radius:6px; cursor:pointer; font-size:12px; text-decoration:none;
+    display:inline-block; margin:2px;
+  }
+  .download-btn:hover {background:#2563eb;}
+  .download-btn:disabled {background:#9ca3af; cursor:not-allowed;}
 </style>
 </head>
 <body>
@@ -35,6 +42,7 @@
         <th>Checkout ID</th>
         <th>Receipt</th>
         <th>Date</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody id="rows"></tbody>
@@ -51,11 +59,19 @@
         <tr>
           <td>${t.id}</td>
           <td>${t.PhoneNumber || ''}</td>
-          <td>${t.Amount || ''}</td>
+          <td>KSH ${t.Amount || ''}</td>
           <td><span class="badge ${t.status}">${t.status}</span></td>
-          <td>${t.CheckoutRequestID || ''}</td>
-          <td>${t.MpesaReceiptNumber || ''}</td>
+          <td style="font-size:11px; max-width:150px; word-break:break-all;">${t.CheckoutRequestID || ''}</td>
+          <td>${t.MpesaReceiptNumber || 'N/A'}</td>
           <td>${t.TransactionDate ? new Date(t.TransactionDate).toLocaleString() : ''}</td>
+          <td>
+            <a href="${baseUrl}/api/mpesa/receipt/${t.id}" 
+               class="download-btn" 
+               target="_blank"
+               title="Download PDF Receipt">
+              📄 PDF
+            </a>
+          </td>
         </tr>
       `).join('');
     }

@@ -50,10 +50,10 @@ export class MpesaExpressService {
         private readonly prisma: PrismaService,
     ) {
         this.mpesaConfig = {
-            shortcode: '174379',
+            shortcode: '6396469',
             passkey: this.configService.get<string>('PASS_KEY') || 'your_passkey_here',
             callbackUrl: this.configService.get<string>('DARAJA_CALLBACK_URL') || 'https://yourdomain.com/api/mpesa/callback',
-            transactionType: 'CustomerPayBillOnline',
+            transactionType: 'CustomerBuyGoodsOnline',
         };
         this.redis = this.redisService.getOrThrow();
     }
@@ -162,21 +162,38 @@ export class MpesaExpressService {
     }
 
     private validateDto(dto: CreateMpesaExpressDto): void {
-        // Convert phone number formats if needed
-        if (dto.phoneNum.match(/^07\d{8}$/)) {
-            dto.phoneNum = '254' + dto.phoneNum.substring(1);
-        } else if (dto.phoneNum.match(/^01\d{8}$/)) {
-            dto.phoneNum = '254' + dto.phoneNum.substring(1);
+        // Auto-detect and convert phone number formats
+        let phoneNumber = dto.phoneNum.replace(/\s+/g, '').replace(/[^\d]/g, '');
+        
+        // Handle different Kenyan phone number formats
+        if (phoneNumber.match(/^07\d{8}$/)) {
+            phoneNumber = '254' + phoneNumber.substring(1);
+        } else if (phoneNumber.match(/^01\d{8}$/)) {
+            phoneNumber = '254' + phoneNumber.substring(1);
+        } else if (phoneNumber.match(/^7\d{8}$/)) {
+            phoneNumber = '254' + phoneNumber;
+        } else if (phoneNumber.match(/^1\d{8}$/)) {
+            phoneNumber = '254' + phoneNumber;
+        } else if (phoneNumber.match(/^2547\d{8}$/)) {
+            // Already in correct format
+        } else if (phoneNumber.match(/^2541\d{8}$/)) {
+            // Already in correct format
+        } else if (phoneNumber.match(/^\+2547\d{8}$/)) {
+            phoneNumber = phoneNumber.substring(1);
+        } else if (phoneNumber.match(/^\+2541\d{8}$/)) {
+            phoneNumber = phoneNumber.substring(1);
         }
+        
+        dto.phoneNum = phoneNumber;
 
         const validations = [
             {
-                condition: !dto.phoneNum.match(/^2547\d{8}$/),
-                message: 'Phone number must be in the format 07XXXXXXXX, 01XXXXXXXX, or 2547XXXXXXXX',
+                condition: !dto.phoneNum.match(/^254[71]\d{8}$/),
+                message: 'Please enter a valid Kenyan Safaricom number',
             },
             {
-                condition: !dto.accountRef.match(/^[a-zA-Z0-9]{1,12}$/),
-                message: 'Account reference must be alphanumeric and not more than 12 characters',
+                condition: !dto.accountRef.match(/^[a-zA-Z0-9\s]{1,20}$/),
+                message: 'Account reference must be alphanumeric and not more than 20 characters',
             },
             {
                 condition: dto.amount <= 0,
@@ -227,7 +244,7 @@ export class MpesaExpressService {
             PartyB: shortcode,
             PhoneNumber: dto.phoneNum,
             CallBackURL: callbackUrl,
-            AccountReference: 'DaniwestTechSol',
+            AccountReference: 'Daniwest Tech Sol',
             TransactionDesc: `Do you want to pay KSH ${dto.amount} to Daniwest Tech Sol Ltd.? Account number: Daniwest Tech Sol`,
         };
     }
