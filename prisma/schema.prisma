@@ -28,7 +28,6 @@ model Transaction {
   status             Status   @default(PENDING)
 }
 
-
 enum Status {
   PENDING
   COMPLETED

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M-Pesa Transactions - Daniwest</title>
+<style>
+  body {font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 1000px; margin: 40px auto; padding: 0 16px;}
+  nav {display:flex;gap:16px;align-items:center;justify-content:flex-start;margin-bottom:16px;}
+  nav a {color:#2c3e50;font-weight:bold;text-decoration:none}
+  h1 {color:#2c3e50}
+  table {width:100%; border-collapse: collapse;}
+  th, td {border:1px solid #e5e7eb; padding:10px; text-align:left;}
+  th {background:#f3f4f6}
+  .badge {padding:4px 8px; border-radius:8px; font-weight:600;}
+  .PENDING {background:#fff7ed; color:#9a3412}
+  .COMPLETED {background:#ecfdf5; color:#065f46}
+  .FAILED {background:#fef2f2; color:#991b1b}
+</style>
+</head>
+<body>
+  <nav>
+    <a href="/">STK Form</a>
+    <a href="/dashboard.html">Dashboard</a>
+  </nav>
+  <h1>📊 Recent Transactions</h1>
+  <p id="meta"></p>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Phone</th>
+        <th>Amount</th>
+        <th>Status</th>
+        <th>Checkout ID</th>
+        <th>Receipt</th>
+        <th>Date</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <script>
+    async function loadTransactions() {
+      const baseUrl = window.location.origin;
+      const res = await fetch(`${baseUrl}/api/mpesa/transactions?limit=50`);
+      const items = await res.json();
+      const tbody = document.getElementById('rows');
+      document.getElementById('meta').textContent = `Loaded ${items.length} records`;
+      tbody.innerHTML = items.map(t => `
+        <tr>
+          <td>${t.id}</td>
+          <td>${t.PhoneNumber || ''}</td>
+          <td>${t.Amount || ''}</td>
+          <td><span class="badge ${t.status}">${t.status}</span></td>
+          <td>${t.CheckoutRequestID || ''}</td>
+          <td>${t.MpesaReceiptNumber || ''}</td>
+          <td>${t.TransactionDate ? new Date(t.TransactionDate).toLocaleString() : ''}</td>
+        </tr>
+      `).join('');
+    }
+    loadTransactions();
+  </script>
+</body>
+</html>

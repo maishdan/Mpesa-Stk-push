@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, Logger, HttpException, HttpStatus, Get, Query } from '@nestjs/common';
 import { MpesaExpressService } from './mpesa-express.service';
 import { CreateMpesaExpressDto } from './dto/create-mpesa-express.dto';
 import { Redis } from 'ioredis';
@@ -46,5 +46,14 @@ export class MpesaExpressController {
     @Post('/callback')
     async handleSTKCallback(@Body() callback: STKCallback) {
         return this.mpesaExpressService.processCallback(callback);
+    }
+
+    @Get('/transactions')
+    async listTransactions(@Query('limit') limit = '20') {
+        const take = Math.min(parseInt(limit, 10) || 20, 100);
+        return this.prisma.transaction.findMany({
+            orderBy: { id: 'desc' },
+            take,
+        });
     }
 }

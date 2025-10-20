@@ -51,8 +51,8 @@ export class MpesaExpressService {
     ) {
         this.mpesaConfig = {
             shortcode: '174379',
-            passkey: this.configService.get<string>('PASS_KEY'),
-            callbackUrl: 'https://goose-merry-mollusk.ngrok-free.app/api/mpesa/callback',
+            passkey: this.configService.get<string>('PASS_KEY') || 'your_passkey_here',
+            callbackUrl: this.configService.get<string>('DARAJA_CALLBACK_URL') || 'https://yourdomain.com/api/mpesa/callback',
             transactionType: 'CustomerPayBillOnline',
         };
         this.redis = this.redisService.getOrThrow();
@@ -91,9 +91,7 @@ export class MpesaExpressService {
             const { MerchantRequestID, CheckoutRequestID, ResultCode, ResultDesc, CallbackMetadata } = stkCallback;
 
             const cachedTransaction = await this.getCachedTransaction(CheckoutRequestID);
-            if (!cachedTransaction) {
-                throw new HttpException('Transaction not found in cache, check the cache logic', 404);
-            }
+            // Proceed even if cache is missing, use metadata values where possible
             const metadata = this.extractCallbackMetadata(CallbackMetadata?.Item || []);
 
             const transactionData = {
@@ -101,11 +99,11 @@ export class MpesaExpressService {
                 CheckoutRequestID,
                 ResultCode,
                 ResultDesc,
-                Amount: cachedTransaction.Amount,
+                Amount: cachedTransaction?.Amount ?? Number(metadata.Amount ?? 0),
                 MpesaReceiptNumber: metadata.MpesaReceiptNumber || '',
                 Balance: metadata.Balance || 0,
                 TransactionDate: new Date(metadata.TransactionDate || Date.now()),
-                PhoneNumber: cachedTransaction.PhoneNumber,
+                PhoneNumber: cachedTransaction?.PhoneNumber ?? String(metadata.PhoneNumber ?? ''),
                 status: ResultCode === '0' ? Status.COMPLETED : Status.FAILED,
             };
 
@@ -113,7 +111,11 @@ export class MpesaExpressService {
             await this.saveTransactionToDatabase(transactionData);
 
             // Clean up Redis cache
-            await this.redis.del(CheckoutRequestID);
+            try {
+                await this.redis.del(CheckoutRequestID);
+            } catch (error) {
+                this.logger.warn(`Redis delete failed: ${error.message}`);
+            }
         } catch (error) {
             this.logger.error(`Callback processing failed: ${error.message}`);
             throw new HttpException('Failed to process callback', 500);
@@ -121,8 +123,13 @@ export class MpesaExpressService {
     }
 
     private async getCachedTransaction(checkoutRequestId: string): Promise<TransactionCache | null> {
-        const cached = await this.redis.get(checkoutRequestId);
-        return cached ? JSON.parse(cached) : null;
+        try {
+            const cached = await this.redis.get(checkoutRequestId);
+            return cached ? JSON.parse(cached) : null;
+        } catch (error) {
+            this.logger.warn(`Redis get failed, returning null: ${error.message}`);
+            return null;
+        }
     }
 
     private extractCallbackMetadata(items: any[]): Record<string, any> {
@@ -149,8 +156,8 @@ export class MpesaExpressService {
                 JSON.stringify(transactionData),
             );
         } catch (error) {
-            this.logger.error(`Error caching transaction: ${error}`);
-            throw new HttpException('Failed to cache transaction', 500);
+            this.logger.warn(`Redis caching failed, continuing without cache: ${error.message}`);
+            // Continue without caching - this is not critical for STK push
         }
     }
 

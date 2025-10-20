@@ -1,9 +1,125 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Document</title>
-    </head>
-    <body></body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M-Pesa STK Push Test - Daniwest Maina</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #34495e;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input[type="text"]:focus, input[type="number"]:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #229954;
+        }
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            margin-bottom: 20px;
+        }
+        .loading {
+            text-align: center;
+            color: #3498db;
+        }
+    </style>
+</head>
+<body>
+    <nav style="display:flex;gap:16px;align-items:center;justify-content:center;margin-bottom:16px;">
+        <a href="/" style="color:#2c3e50;font-weight:bold;text-decoration:none;">STK Form</a>
+        <a href="/dashboard.html" style="color:#2c3e50;font-weight:bold;text-decoration:none;">Dashboard</a>
+    </nav>
+
+    <div class="container">
+        <h1>🚀 Welcome to Daniwest Tech STK Menu</h1>
+        <p class="info">
+            This is your home page. Use the buttons below to start a payment or view transactions. The API is at <span id="endpoint"></span>.
+        </p>
+        <div class="form-group" style="display:flex;gap:12px;">
+            <a href="/stk.html"><button type="button">Go to STK Form</button></a>
+            <a href="/dashboard.html"><button type="button" style="background:#6366f1">Open Dashboard</button></a>
+        </div>
+        <div id="result" class="result info" style="display:block">Ready</div>
+    </div>
+
+    <script>
+        // Home page only shows navigation; STK logic is on stk.html
+        function showResult(type, message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${type}`;
+            resultDiv.innerHTML = message;
+            resultDiv.style.display = 'block';
+        }
+
+        // Set endpoint label dynamically
+        document.getElementById('endpoint').textContent = `${window.location.origin}/api/mpesa/stkpush`;
+    </script>
+</body>
 </html>

@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: mpesa-stk-api
+    env: node
+    plan: free
+    buildCommand: pnpm install && npx prisma generate && pnpm build
+    startCommand: pnpm start:prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: CONSUMER_KEY
+        sync: false
+      - key: CONSUMER_SECRET
+        sync: false
+      - key: PASS_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false

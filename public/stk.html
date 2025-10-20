@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daniwest STK - Pay</title>
+    <style>
+        body {font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; background:#f5f7fb}
+        nav {display:flex;gap:16px;align-items:center;justify-content:flex-start;margin-bottom:16px}
+        nav a {color:#2c3e50;font-weight:bold;text-decoration:none}
+        .container {background:#fff; padding:24px; border-radius:12px; box-shadow:0 6px 24px rgba(0,0,0,.06)}
+        h1 {margin-top:0;color:#2c3e50}
+        .form-group {margin-bottom:16px}
+        label {display:block;margin-bottom:6px;color:#34495e}
+        input[type="text"], input[type="number"] {width:100%; padding:12px; border:2px solid #e5e7eb; border-radius:8px; font-size:16px}
+        input:focus {outline:none; border-color:#3498db}
+        button {width:100%; padding:14px; background:#27ae60; color:#fff; border:none; border-radius:8px; font-size:16px; font-weight:600; cursor:pointer}
+        button:disabled {background:#cbd5e1}
+        .result {margin-top:16px; padding:12px; border-radius:8px; display:none}
+        .success {background:#ecfdf5; border:1px solid #bbf7d0; color:#065f46}
+        .error {background:#fef2f2; border:1px solid #fecaca; color:#991b1b}
+        .info {background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; margin-bottom:16px}
+        .spinner {width:24px;height:24px;border:3px solid #e2e8f0;border-top-color:#3498db;border-radius:50%;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px}
+        @keyframes spin {to {transform: rotate(360deg)}}
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/">Home</a>
+        <a href="/stk.html">STK Form</a>
+        <a href="/dashboard.html">Dashboard</a>
+    </nav>
+
+    <div class="container">
+        <h1>💳 M-Pesa STK Push</h1>
+        <p class="info">
+            Enter a Safaricom number in 2547XXXXXXXX format and the amount. You will receive an M‑Pesa prompt to enter your PIN.
+        </p>
+
+        <form id="stkForm">
+            <div class="form-group">
+                <label for="phoneNum">Phone Number</label>
+                <input type="text" id="phoneNum" name="phoneNum" placeholder="2547XXXXXXXX" required>
+            </div>
+            <div class="form-group">
+                <label for="amount">Amount (KES)</label>
+                <input type="number" id="amount" name="amount" min="1" placeholder="100" required>
+            </div>
+            <div class="form-group">
+                <label for="accountRef">Account Reference</label>
+                <input type="text" id="accountRef" name="accountRef" maxlength="12" placeholder="DaniwestWiFi" required>
+            </div>
+            <button type="submit" id="submitBtn">Pay Now</button>
+        </form>
+
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        document.getElementById('stkForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const resultDiv = document.getElementById('result');
+            const formData = {
+                phoneNum: document.getElementById('phoneNum').value.trim(),
+                amount: parseInt(document.getElementById('amount').value, 10),
+                accountRef: document.getElementById('accountRef').value.trim(),
+            };
+
+            if (!/^2547\d{8}$/.test(formData.phoneNum)) {
+                show('error', 'Phone must be 2547XXXXXXXX');
+                return;
+            }
+            if (!/^[a-zA-Z0-9]{1,12}$/.test(formData.accountRef)) {
+                show('error', 'Account reference must be alphanumeric, max 12 chars');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Processing...';
+            resultDiv.style.display = 'none';
+
+            try {
+                const baseUrl = window.location.origin;
+                const res = await fetch(`${baseUrl}/api/mpesa/stkpush`, {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify(formData)
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    show('success', `STK sent. CheckoutRequestID: ${data.data.CheckoutRequestID}`);
+                } else {
+                    show('error', data.message || 'Failed to initiate STK');
+                }
+            } catch (err) {
+                show('error', 'Network error: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Pay Now';
+            }
+
+            function show(type, msg) {
+                resultDiv.className = `result ${type}`;
+                resultDiv.innerHTML = msg;
+                resultDiv.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
+

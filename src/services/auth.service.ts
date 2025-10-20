@@ -9,8 +9,8 @@ export class AuthService {
 
     async generateToken() {
         try {
-            const secret = this.configService.get<string>('CONSUMER_SECRET');
-            const consumer = this.configService.get<string>('CONSUMER_KEY');
+            const secret = this.configService.get<string>('CONSUMER_SECRET') || 'your_consumer_secret_here';
+            const consumer = this.configService.get<string>('CONSUMER_KEY') || 'your_consumer_key_here';
 
             if (!secret || !consumer) {
                 this.logger.error('Consumer key or secret not found');
